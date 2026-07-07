@@ -1,0 +1,1966 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Anatomía de Combate - Edición Apocalíptica</title>
+    <!-- Importar Tailwind CSS para diseño moderno -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Iconos Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Inter para una tipografía ultra limpia) -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700;800&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #0b0f19;
+            background-image: radial-gradient(circle at top left, #1e112c 0%, #080c14 100%);
+        }
+        /* Efecto de cuadrícula de artista de fondo */
+        .sketch-grid {
+            background-size: 40px 40px;
+            background-image: linear-gradient(to right, rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                              linear-gradient(to bottom, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+        }
+        @keyframes pulse-red {
+            0%, 100% { transform: scale(1); filter: drop-shadow(0 0 10px rgba(239, 68, 68, 0.5)); }
+            50% { transform: scale(1.03); filter: drop-shadow(0 0 20px rgba(239, 68, 68, 0.8)); }
+        }
+        .boss-warning {
+            animation: pulse-red 1.2s infinite ease-in-out;
+        }
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            10%, 30%, 50%, 70%, 90% { transform: translateX(-4px); }
+            20%, 40%, 60%, 80% { transform: translateX(4px); }
+        }
+        .damage-shake {
+            animation: shake 0.3s ease-in-out;
+        }
+        @keyframes rainbow-border {
+            0%, 100% { border-color: #f43f5e; }
+            50% { border-color: #10b981; }
+        }
+        .rainbow-pulse {
+            animation: rainbow-border 2s infinite;
+        }
+    </style>
+</head>
+<body class="sketch-grid min-h-screen text-slate-100 flex flex-col justify-between overflow-x-hidden">
+
+<script>
+    let audioCtx = null;
+    let synthInterval = null;
+    let isMuted = true;
+    let bgNodes = [];
+
+    function initAudio() {
+        if (audioCtx) return;
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+
+    // Tocar un acorde suave de sintetizador relajante
+    function playRelaxingChord(frequencies, duration = 4) {
+        if (isMuted || !audioCtx) return;
+        
+        const now = audioCtx.currentTime;
+        const masterGain = audioCtx.createGain();
+        masterGain.gain.setValueAtTime(0, now);
+        masterGain.gain.linearRampToValueAtTime(0.02, now + 1.5);
+        masterGain.gain.exponentialRampToValueAtTime(0.0001, now + duration);
+        masterGain.connect(audioCtx.destination);
+        bgNodes.push(masterGain);
+
+        frequencies.forEach(freq => {
+            const osc = audioCtx.createOscillator();
+            const filter = audioCtx.createBiquadFilter();
+            
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(freq, now);
+            
+            // LFO para vibrato relajante
+            const lfo = audioCtx.createOscillator();
+            const lfoGain = audioCtx.createGain();
+            lfo.frequency.value = 1.0;
+            lfoGain.gain.value = 1.2; 
+            lfo.connect(lfoGain);
+            lfoGain.connect(osc.frequency);
+            lfo.start();
+
+            filter.type = 'lowpass';
+            filter.frequency.setValueAtTime(300, now);
+            filter.frequency.exponentialRampToValueAtTime(650, now + duration * 0.5);
+
+            osc.connect(filter);
+            filter.connect(masterGain);
+            osc.start();
+            osc.stop(now + duration);
+        });
+    }
+
+    // Bucle de música de fondo (progresiones armónicas de piano suave)
+    function startBgMusic() {
+        initAudio();
+        if (synthInterval) clearInterval(synthInterval);
+        
+        const progressions = [
+            [130.81, 196.00, 261.63, 329.63, 392.00], // Cmaj7
+            [146.83, 220.00, 293.66, 349.23, 440.00], // Dm7
+            [174.61, 261.63, 349.23, 440.00, 523.25], // Fmaj7
+            [164.81, 246.94, 329.63, 392.00, 493.88]  // Em7
+        ];
+        
+        let chordIndex = 0;
+        const playLoop = () => {
+            if (!isMuted) {
+                playRelaxingChord(progressions[chordIndex], 6);
+                chordIndex = (chordIndex + 1) % progressions.length;
+            }
+        };
+
+        playLoop();
+        synthInterval = setInterval(playLoop, 5500);
+    }
+
+    // Sonidos interactivos utilizando Web Audio API
+    function playHurtSound() {
+        if (isMuted || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(140, now);
+        osc.frequency.exponentialRampToValueAtTime(40, now + 0.25);
+        gain.gain.setValueAtTime(0.15, now);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.25);
+        
+        const filter = audioCtx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.setValueAtTime(350, now);
+
+        osc.connect(filter);
+        filter.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(now + 0.25);
+    }
+
+    function playShootSound() {
+        if (isMuted || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(550, now);
+        osc.frequency.exponentialRampToValueAtTime(1000, now + 0.08);
+        gain.gain.setValueAtTime(0.02, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(now + 0.08);
+    }
+
+    function playHealSound() {
+        if (isMuted || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const notes = [261.63, 329.63, 392.00, 523.25];
+        notes.forEach((freq, idx) => {
+            const osc = audioCtx.createOscillator();
+            const gain = audioCtx.createGain();
+            osc.type = 'sine';
+            osc.frequency.value = freq;
+            gain.gain.setValueAtTime(0, now);
+            gain.gain.linearRampToValueAtTime(0.06, now + idx * 0.08 + 0.01);
+            gain.gain.exponentialRampToValueAtTime(0.001, now + idx * 0.08 + 0.3);
+            osc.connect(gain);
+            gain.connect(audioCtx.destination);
+            osc.start(now + idx * 0.08);
+            osc.stop(now + idx * 0.08 + 0.3);
+        });
+    }
+
+    function playNerfSound() {
+        if (isMuted || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(180, now);
+        osc.frequency.linearRampToValueAtTime(70, now + 0.4);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(now + 0.4);
+    }
+
+    function playMimicSound() {
+        if (isMuted || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(80, now);
+        osc.frequency.linearRampToValueAtTime(400, now + 0.3);
+        gain.gain.setValueAtTime(0.1, now);
+        gain.gain.linearRampToValueAtTime(0.1, now + 0.15);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(now + 0.3);
+    }
+
+    function playSuperSound() {
+        if (isMuted || !audioCtx) return;
+        const now = audioCtx.currentTime;
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sawtooth';
+        osc.frequency.setValueAtTime(120, now);
+        osc.frequency.exponentialRampToValueAtTime(800, now + 0.6);
+        gain.gain.setValueAtTime(0.2, now);
+        gain.gain.exponentialRampToValueAtTime(0.001, now + 0.6);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(now + 0.6);
+    }
+</script>
+
+<script>
+    const gameLevels = [
+        {
+            id: 1,
+            title: "Proporciones Básicas",
+            subtitle: "El Canon de las 8 Cabezas",
+            bossName: "El Maniquí Rígido",
+            bossDescription: "Un rival estático que ataca con aplastamientos lentos.",
+            bossMaxHp: 100,
+            baseSpeed: 1.2,
+            telegraphInterval: 140,
+            trivia: {
+                question: "¿Cuántas 'cabezas' de altura mide la figura humana ideal en el canon de dibujo artístico estándar?",
+                options: [
+                    { text: "6 Cabezas (Estilo cartoon)", correct: false },
+                    { text: "8 Cabezas (Canon clásico ideal)", correct: true },
+                    { text: "12 Cabezas (Canon de superhéroes extremos)", correct: false }
+                ],
+                explanation: "El canon clásico utiliza 8 cabezas como unidad: el torso mide unas 3 cabezas, las piernas 4 cabezas y la cabeza en sí es la unidad base (1).",
+                drawType: "grid8"
+            }
+        },
+        {
+            id: 2,
+            title: "La Estructura Facial",
+            subtitle: "Líneas de Guía y Simetría",
+            bossName: "La Máscara Asimétrica",
+            bossDescription: "Dispara lágrimas de tinta dirigidas de forma intermitente.",
+            bossMaxHp: 140,
+            baseSpeed: 1.6,
+            telegraphInterval: 110,
+            trivia: {
+                question: "Al dibujar un rostro de frente, ¿en qué línea guía horizontal se posicionan los ojos?",
+                options: [
+                    { text: "En la línea superior de la cabeza", correct: false },
+                    { text: "En la línea media de la cabeza (justo a la mitad vertical)", correct: true },
+                    { text: "En el tercio inferior", correct: false }
+                ],
+                explanation: "Los ojos se ubican exactamente en la mitad vertical de toda la cabeza (midiendo de la coronilla a la barbilla), no arriba.",
+                drawType: "face"
+            }
+        },
+        {
+            id: 3,
+            title: "Articulaciones y Ritmo",
+            subtitle: "Alineación de Extremidades",
+            bossName: "El Titiritero Enredado",
+            bossDescription: "Lanza ráfagas de hilos cortantes telegrafiados.",
+            bossMaxHp: 180,
+            baseSpeed: 2.0,
+            telegraphInterval: 90,
+            trivia: {
+                question: "Cuando dibujas los brazos en una pose relajada, ¿con qué parte del cuerpo coincide la altura del codo?",
+                options: [
+                    { text: "Con el pecho / pezones", correct: false },
+                    { text: "Con la cintura / ombligo", correct: true },
+                    { text: "Con las rodillas", correct: false }
+                ],
+                explanation: "Los codos de una figura humana relajada se alinean exactamente con la cintura (justo arriba del ombligo).",
+                drawType: "arms"
+            }
+        },
+        {
+            id: 4,
+            title: "La Caja Torácica",
+            subtitle: "La Estructura en Cajas",
+            bossName: "El Cofre Fracturado",
+            bossDescription: "Sólido y peligroso. Su área de impacto es grande y lanza metralla de madera.",
+            bossMaxHp: 220,
+            baseSpeed: 2.2,
+            telegraphInterval: 80,
+            trivia: {
+                question: "¿Qué forma geométrica básica tridimensional se usa comúnmente para abocetar la caja torácica?",
+                options: [
+                    { text: "Un cilindro alargado perfecto", correct: false },
+                    { text: "Un ovoide o forma de huevo", correct: true },
+                    { text: "Un cubo regular plano", correct: false }
+                ],
+                explanation: "La caja torácica tiene una estructura ovoide truncada que es mucho más orgánica que un cubo, facilitando la colocación posterior de los pectorales y dorsales.",
+                drawType: "ribcage"
+            }
+        },
+        {
+            id: 5,
+            title: "Columna y Ritmo",
+            subtitle: "La Línea de Acción (Examen Final)",
+            bossName: "La Serpiente Vertebral",
+            bossDescription: "Se desliza con rapidez de extremo a extremo, dejando rastros dañinos.",
+            bossMaxHp: 300,
+            baseSpeed: 2.6,
+            telegraphInterval: 70,
+            trivia: {
+                question: "¿Qué es la 'línea de acción' al dibujar poses en la figura humana?",
+                options: [
+                    { text: "Una línea para detallar los pliegues de la ropa", correct: false },
+                    { text: "Una línea imaginaria que define el flujo y dinamismo de la pose", correct: true },
+                    { text: "La línea que separa la luz de la sombra proyectada", correct: false }
+                ],
+                explanation: "La línea de acción es un trazo rápido que captura la dirección general del movimiento del cuerpo, típicamente siguiendo la columna vertebral.",
+                drawType: "lineofaction"
+            }
+        }
+    ];
+
+    let currentLevelIdx = 0;
+    let playerMaxHp = 100;
+    let playerHp = 100;
+    let hasNerf = false;
+    let playerDamageMultiplier = 1.0; 
+    let currentBossHp = 100;
+    let currentBossMaxHp = 100;
+    let isGameOver = false;
+
+    // Estado del Motor Físico del Combate (Arena)
+    let gameState = "START"; // "START", "CUSTOMIZE", "COMBAT", "TRIVIA", "END"
+    let keys = {};
+    let player = {
+        x: 150,
+        y: 250,
+        radius: 12,
+        speed: 4.5,
+        shootCooldown: 0,
+        dir: 1
+    };
+
+    // Nuevas Variables: Customización, Pociones y Súper
+    let customColor = "#38bdf8";       // Azul por defecto
+    let customFillColor = "#0369a1";
+    let customShape = "mannequin";     // mannequin, sphere, box, cross
+    let potionsCount = 4;
+    let superCharge = 0;               // 0 a 100%
+    const maxSuperCharge = 100;
+    let superDuration = 0;             // Duración de la habilidad activa
+    
+    // Coordenadas de mira (Mouse)
+    let aimX = 300;
+    let aimY = 50;
+
+    // Configuración del Jefe con soporte para mimetismo
+    let boss = {
+        x: 150,
+        y: 50,
+        width: 60,
+        height: 60,
+        speed: 1.5,
+        dir: 1,
+        attackCooldown: 0,
+        isMimicking: false,
+        mimicTimer: 0,
+        nextMimicTimer: 300 
+    };
+    
+    let playerProjectiles = [];
+    let bossProjectiles = [];
+    let redTelegraphs = [];
+    let particles = [];
+    let backgroundDebris = []; 
+</script>
+
+<header class="p-4 bg-slate-950/90 backdrop-blur border-b border-slate-900 flex justify-between items-center z-10">
+    <div class="flex items-center gap-3">
+        <div class="bg-indigo-600 p-2 rounded-xl text-white shadow-lg shadow-indigo-500/30">
+            <i class="fa-solid fa-paintbrush text-xl animate-pulse"></i>
+        </div>
+        <div>
+            <h1 class="text-base md:text-lg font-extrabold tracking-tight bg-gradient-to-r from-rose-400 via-indigo-400 to-purple-400 bg-clip-text text-transparent">Anatomía de Combate: Ciudad en Ruinas</h1>
+            <p class="text-[10px] md:text-xs text-slate-400">Esquiva en tiempo real, apunta libremente y domina el boceto.</p>
+        </div>
+    </div>
+    
+    <div class="flex items-center gap-2">
+        <button onclick="toggleMute()" id="music-btn" class="px-3 py-1.5 bg-slate-900 hover:bg-slate-800 active:scale-95 transition rounded-xl text-xs font-semibold flex items-center gap-2 border border-slate-800">
+            <i id="music-icon" class="fa-solid fa-volume-xmark text-red-400"></i>
+            <span id="music-text" class="hidden sm:inline">Música: Silenciada</span>
+        </button>
+        <button onclick="showInstructionsModal()" class="w-8 h-8 bg-slate-900 hover:bg-slate-800 transition rounded-xl flex items-center justify-center text-slate-400 border border-slate-800">
+            <i class="fa-solid fa-circle-question"></i>
+        </button>
+    </div>
+</header>
+
+<main class="flex-grow flex items-center justify-center p-4 max-w-6xl mx-auto w-full z-10">
+    
+    <!-- PANTALLA 1: MENU DE INICIO & TUTORIAL -->
+    <section id="menu-screen" class="w-full max-w-md bg-slate-950/95 border border-slate-900 rounded-2xl p-6 md:p-8 text-center shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-gradient-to-r from-rose-500 via-indigo-500 to-purple-500"></div>
+        <i class="fa-solid fa-city text-6xl text-rose-500 mb-4 inline-block drop-shadow-[0_0_15px_rgba(244,63,94,0.4)]"></i>
+        <h2 class="text-2xl md:text-3xl font-extrabold tracking-tight mb-2">¡Sobrevive a la Ciudad del Arte!</h2>
+        <p class="text-slate-400 text-sm mb-6 leading-relaxed">El paisaje urbano ha colapsado. Muévete por las ruinas, apunta con el ratón y desata el poder del boceto definitivo.</p>
+        
+        <div class="bg-indigo-950/20 rounded-xl p-4 border border-indigo-900/40 text-left mb-6 space-y-3">
+            <h4 class="text-xs font-bold uppercase tracking-wider text-rose-400 flex items-center gap-1.5">
+                <i class="fa-solid fa-gamepad"></i> Controles del Teclado y Mouse:
+            </h4>
+            <div class="grid grid-cols-2 gap-2 text-xs text-slate-300">
+                <div><strong class="text-indigo-400">WASD / Flechas:</strong> Movimiento</div>
+                <div><strong class="text-indigo-400">Mover Ratón:</strong> Apuntar trazos</div>
+                <div><strong class="text-indigo-400">Tecla E / Clic Poción:</strong> Usar Poción</div>
+                <div><strong class="text-indigo-400">Tecla Q / Espacio:</strong> Habilidad Súper</div>
+            </div>
+            <div class="border-t border-indigo-950/60 pt-2 text-xs text-slate-400">
+                <i class="fa-solid fa-shield-halved text-emerald-400 mr-1"></i> Tienes <strong>4 pociones</strong> que restauran el 100% de tu salud. ¡Úsalas sabiamente!
+            </div>
+        </div>
+
+        <button onclick="goToCustomize()" class="w-full py-3.5 bg-rose-600 hover:bg-rose-500 active:scale-95 transition font-bold text-white rounded-xl shadow-lg shadow-rose-600/30 flex items-center justify-center gap-2 text-base">
+            Siguiente: Personaliza tu Avatar <i class="fa-solid fa-arrow-right"></i>
+        </button>
+    </section>
+
+    <!-- PANTALLA 1.5: PERSONALIZACIÓN DEL AVATAR -->
+    <section id="customize-screen" class="hidden w-full max-w-md bg-slate-950/95 border border-slate-900 rounded-2xl p-6 md:p-8 text-center shadow-2xl relative overflow-hidden">
+        <div class="absolute top-0 left-0 w-full h-1.5 bg-indigo-500"></div>
+        <h2 class="text-2xl font-extrabold tracking-tight mb-4 flex items-center justify-center gap-2">
+            <i class="fa-solid fa-palette text-indigo-400"></i> Diseña tu Personaje
+        </h2>
+        
+        <!-- Vista previa simple -->
+        <div class="mb-6 p-4 bg-slate-900/50 rounded-xl border border-slate-800 flex flex-col items-center">
+            <span class="text-xs text-slate-500 mb-2">Vista Previa de Trazos</span>
+            <div id="customize-preview" class="w-20 h-20 rounded-full flex items-center justify-center border-2 border-indigo-500/30 bg-slate-950">
+                <div class="w-8 h-8 rounded-full bg-sky-400 animate-pulse"></div>
+            </div>
+        </div>
+
+        <!-- Selección de Colores -->
+        <div class="mb-5 text-left">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Color de Tinta:</label>
+            <div class="flex gap-3 justify-center">
+                <button onclick="selectColor('#38bdf8', '#0369a1')" class="w-8 h-8 rounded-full bg-sky-400 border-2 border-transparent active:scale-90 transition" id="col-1"></button>
+                <button onclick="selectColor('#10b981', '#047857')" class="w-8 h-8 rounded-full bg-emerald-500 border-2 border-transparent active:scale-90 transition" id="col-2"></button>
+                <button onclick="selectColor('#f43f5e', '#be123c')" class="w-8 h-8 rounded-full bg-rose-500 border-2 border-transparent active:scale-90 transition" id="col-3"></button>
+                <button onclick="selectColor('#fbbf24', '#b45309')" class="w-8 h-8 rounded-full bg-amber-400 border-2 border-transparent active:scale-90 transition" id="col-4"></button>
+                <button onclick="selectColor('#22d3ee', '#0891b2')" class="w-8 h-8 rounded-full bg-cyan-400 border-2 border-transparent active:scale-90 transition" id="col-5"></button>
+            </div>
+        </div>
+
+        <!-- Selección de Formas -->
+        <div class="mb-6 text-left">
+            <label class="text-xs font-bold text-slate-400 uppercase tracking-wider block mb-2">Forma del Personaje:</label>
+            <div class="grid grid-cols-2 gap-2">
+                <button onclick="selectShape('mannequin')" id="shape-mannequin" class="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold text-slate-300">
+                    <i class="fa-solid fa-person mr-1"></i> Maniquí Clásico
+                </button>
+                <button onclick="selectShape('sphere')" id="shape-sphere" class="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold text-slate-300">
+                    <i class="fa-solid fa-circle mr-1"></i> Esfera de Boceto
+                </button>
+                <button onclick="selectShape('box')" id="shape-box" class="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold text-slate-300">
+                    <i class="fa-solid fa-cube mr-1"></i> Cubo Rígido
+                </button>
+                <button onclick="selectShape('cross')" id="shape-cross" class="p-2.5 bg-slate-900 hover:bg-slate-800 border border-slate-800 rounded-xl text-xs font-bold text-slate-300">
+                    <i class="fa-solid fa-crosshairs mr-1"></i> Cruz de Guía
+                </button>
+            </div>
+        </div>
+
+        <button onclick="startGame()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition font-bold text-white rounded-xl shadow-lg flex items-center justify-center gap-2">
+            <i class="fa-solid fa-skull"></i> Entrar a la Batalla
+        </button>
+    </section>
+
+    <!-- PANTALLA 2: CONTENEDOR PRINCIPAL DE LA ARENA -->
+    <section id="game-screen" class="hidden w-full bg-slate-950/95 border border-slate-900 rounded-3xl overflow-hidden shadow-2xl flex flex-col lg:flex-row min-h-[550px]">
+        
+        <!-- PANEL IZQUIERDO: LIENZO INTERACTIVO CON CIUDAD DESTRUIDA -->
+<div class="w-full lg:w-3/5 bg-slate-950 border-r border-slate-900 flex flex-col justify-between p-4 relative">
+    
+    <div class="flex justify-between items-center mb-2">
+        <span class="text-xs font-bold uppercase tracking-widest text-slate-400 flex items-center gap-2">
+            <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+            Arena: <span id="canvas-mode-indicator" class="text-indigo-400">Modo Combate</span>
+        </span>
+        <div class="flex gap-2">
+            <span id="ui-mimic-alert" class="text-xs text-rose-500 font-extrabold hidden animate-pulse">
+                <i class="fa-solid fa-circle-exclamation"></i> ¡EL JEFE COPIA TU FORMA!
+            </span>
+            <span id="ui-special-alert" class="text-xs text-amber-500 font-extrabold hidden animate-pulse">
+                <i class="fa-solid fa-triangle-exclamation"></i> ¡ATAQUE ESPECIAL CARGANDO!
+            </span>
+        </div>
+    </div>
+
+    <!-- CONTENEDOR CENTRAL DEL CANVAS -->
+            <div class="flex-grow flex items-center justify-center bg-slate-950/30 rounded-2xl border border-slate-900/80 overflow-hidden relative aspect-video min-h-[320px] md:min-h-[400px]">
+                <canvas id="arena-canvas" width="600" height="400" class="w-full h-full block cursor-crosshair touch-none"></canvas>
+            </div>
+
+            <!-- PIE DEL LIENZO -->
+            <div class="mt-2 text-slate-400 text-xs text-center flex justify-center items-center gap-4 flex-wrap">
+                <div><span class="inline-block w-3 h-3 bg-indigo-500 rounded-full mr-1"></span> Tú (Azul)</div>
+                <div><span class="inline-block w-3 h-3 bg-purple-500 rounded mr-1"></span> Jefe</div>
+                <div><span class="inline-block w-3 h-3 bg-red-600 rounded-full mr-1 animate-pulse"></span> Mímica (Rojo)</div>
+                <div><span class="inline-block w-3.5 h-1.5 bg-rose-600/30 rounded mr-1"></span> Área Roja</div>
+            </div>
+        </div>
+
+        <!-- PANEL DERECHO: CONTROLES, TRIVIA E HISTORIA -->
+        <div class="w-full lg:w-2/5 p-6 flex flex-col justify-between bg-slate-900/10">
+            
+            <!-- PANEL ESTADÍSTICO SUPERIOR -->
+            <div class="space-y-4">
+                <div class="flex justify-between items-center pb-3 border-b border-slate-900">
+                    <div>
+                        <h3 class="font-extrabold text-sm md:text-base bg-gradient-to-r from-rose-400 to-indigo-300 bg-clip-text text-transparent" id="ui-boss-active-name">Jefe de Anatomía</h3>
+                        <p class="text-[10px] text-slate-400">Objetivo del Nivel <span id="ui-current-level">1</span>/5</p>
+                    </div>
+                    <span id="ui-level-title" class="px-2.5 py-1 bg-rose-950/40 text-rose-300 border border-rose-900/50 rounded-full text-[10px] font-bold">
+                        Proporciones
+                    </span>
+                </div>
+
+                <!-- Barra de Vida del Jugador -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-semibold text-slate-300">
+                        <span class="flex items-center gap-1.5">
+                            <i class="fa-solid fa-heart text-rose-500"></i> Tu Salud (HP)
+                        </span>
+                        <span id="ui-player-hp">100 / 100</span>
+                    </div>
+                    <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-900">
+                        <div id="ui-player-hp-bar" class="h-full bg-emerald-500 transition-all duration-300" style="width: 100%;"></div>
+                    </div>
+                </div>
+
+                <!-- Barra de Vida del Jefe -->
+                <div class="space-y-1">
+                    <div class="flex justify-between text-xs font-semibold text-slate-300">
+                        <span class="flex items-center gap-1.5 text-rose-400">
+                            <i class="fa-solid fa-skull-crossbones"></i> Salud del Enemigo
+                        </span>
+                        <span id="ui-boss-hp">100 / 100</span>
+                    </div>
+                    <div class="w-full h-3 bg-slate-950 rounded-full overflow-hidden border border-slate-900">
+                        <div id="ui-boss-hp-bar" class="h-full bg-rose-500 transition-all duration-300" style="width: 100%;"></div>
+                    </div>
+                </div>
+
+                <!-- CONTROLES ACTIVOS DE POCIONES Y SUPER (HUD COMBATE INTERACTIVO) -->
+                <div class="grid grid-cols-2 gap-3 pt-2">
+                    <!-- Pociones de Tinta -->
+                    <button onclick="drinkPotion()" id="ui-potion-button" class="flex flex-col items-center justify-center p-3 bg-slate-950 hover:bg-slate-900 border border-slate-800 rounded-2xl active:scale-95 transition">
+                        <div class="flex items-center gap-2">
+                            <i class="fa-solid fa-flask-vial text-xl text-teal-400"></i>
+                            <span class="font-extrabold text-sm" id="ui-potion-count">4</span>
+                        </div>
+                        <span class="text-[9px] text-slate-400 mt-1 uppercase font-bold tracking-wider">Usar Poción [E]</span>
+                    </button>
+
+                    <!-- Habilidad Súper -->
+                    <button onclick="activateSuper()" id="ui-super-button" class="flex flex-col items-center justify-center p-3 bg-slate-950 border border-slate-800 rounded-2xl active:scale-95 transition">
+                        <div class="w-full bg-slate-900 h-1.5 rounded-full overflow-hidden mb-1">
+                            <div id="ui-super-bar" class="h-full bg-indigo-500" style="width: 0%;"></div>
+                        </div>
+                        <span class="text-[9px] font-extrabold text-indigo-400 uppercase tracking-wider" id="ui-super-text">CARGANDO [Q]</span>
+                    </button>
+                </div>
+
+                <!-- Estado del Daño (Nerfeado vs Normal) -->
+                <div class="flex justify-between items-center p-2.5 bg-slate-950 rounded-xl border border-slate-900 text-xs">
+                    <span class="text-slate-400">Poder de Lápiz:</span>
+                    <div id="ui-damage-status" class="flex items-center gap-1.5 font-bold text-emerald-400">
+                        <i class="fa-solid fa-bolt"></i> 100% (Normal)
+                    </div>
+                </div>
+            </div>
+
+            <!-- DINÁMICO: FASE DE COMBATE (Mostrado por defecto) -->
+            <div id="game-combat-phase" class="flex-grow flex flex-col justify-center space-y-4 py-6">
+                <div class="p-4 bg-slate-950 rounded-2xl border border-slate-900 text-center space-y-3 boss-warning">
+                    <div class="text-xs font-bold text-rose-400 tracking-wider flex items-center justify-center gap-1.5">
+                        <i class="fa-solid fa-triangle-exclamation"></i> FASE DE ACCIÓN DIRECTA
+                    </div>
+                    <p id="ui-combat-tips" class="text-xs text-slate-300 leading-relaxed">
+                        ¡Esquiva proyectiles y zonas de daño! Apunta directamente al enemigo moviendo tu cursor por la arena táctica.
+                    </p>
+                </div>
+            </div>
+
+            <!-- DINÁMICO: FASE DE TRIVIA (Oculto por defecto) -->
+            <div id="game-trivia-phase" class="hidden flex-grow flex flex-col justify-center space-y-4 py-4">
+                <div class="space-y-1">
+                    <span class="px-2 py-0.5 bg-emerald-950/50 text-emerald-400 border border-emerald-900/50 rounded text-[9px] font-extrabold uppercase tracking-wider">
+                        Recompensa de Vida (No escala dificultad)
+                    </span>
+                    <h3 class="text-base font-extrabold text-slate-100" id="ui-trivia-question">Pregunta de Anatomía</h3>
+                </div>
+
+                <!-- Opciones -->
+                <div id="ui-trivia-options" class="flex flex-col gap-2"></div>
+
+                <!-- Retroalimentación Educativa -->
+                <div id="ui-trivia-feedback" class="hidden p-3 rounded-xl text-xs leading-relaxed border transition-all duration-300">
+                    <div id="ui-trivia-feedback-title" class="font-bold mb-1">Resultado</div>
+                    <div id="ui-trivia-feedback-text">Contenido educativo explicativo...</div>
+                </div>
+
+                <!-- Botón de avance -->
+                <button id="ui-trivia-continue" class="hidden w-full py-3 bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition font-bold text-white rounded-xl text-xs text-center shadow-lg" onclick="advanceLevel()">
+                    Siguiente Nivel <i class="fa-solid fa-arrow-right ml-1"></i>
+                </button>
+            </div>
+
+            <div class="text-[10px] text-slate-500 text-center pt-3 border-t border-slate-900 flex justify-between">
+                <span>Controles: WASD / Mouse para apuntar</span>
+                <span>Anatomía de Combate 2026</span>
+            </div>
+        </div>
+    </section>
+
+    <!-- PANTALLA 3: VICTORIA O DERROTA FINAL -->
+    <section id="end-screen" class="hidden w-full max-w-md bg-slate-950/95 border border-slate-900 rounded-2xl p-6 md:p-8 text-center shadow-2xl relative overflow-hidden">
+        <div id="ui-end-banner" class="absolute top-0 left-0 w-full h-1.5 bg-emerald-500"></div>
+        <div id="ui-end-icon-container" class="mb-4">
+            <i class="fa-solid fa-trophy text-6xl text-amber-400 drop-shadow-[0_0_15px_rgba(245,158,11,0.4)]"></i>
+        </div>
+        <h2 id="ui-end-title" class="text-2xl md:text-3xl font-extrabold mb-3">¡Victoria del Artista!</h2>
+        <p id="ui-end-text" class="text-slate-300 text-sm mb-6 leading-relaxed">Has superado todos los niveles y devuelto el orden al lienzo destruido de la ciudad.</p>
+
+        <button onclick="resetGame()" class="w-full py-3.5 bg-indigo-600 hover:bg-indigo-500 active:scale-95 transition font-bold text-white rounded-xl shadow-lg flex items-center justify-center gap-2">
+            <i class="fa-solid fa-rotate-left"></i> Volver a Empezar
+        </button>
+    </section>
+
+</main>
+
+<div id="instructions-modal" class="hidden fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50">
+    <div class="bg-slate-900 border border-slate-800 max-w-md w-full rounded-2xl p-6 shadow-2xl text-slate-300 text-sm relative">
+        <button onclick="closeInstructionsModal()" class="absolute top-4 right-4 text-slate-500 hover:text-slate-300 transition">
+            <i class="fa-solid fa-xmark text-lg"></i>
+        </button>
+        <h3 class="text-lg font-bold text-slate-100 mb-3 flex items-center gap-2">
+            <i class="fa-solid fa-circle-question text-rose-400"></i> ¿Cómo sobrevivir a la ciudad?
+        </h3>
+        <div class="space-y-4">
+            <div>
+                <h4 class="font-bold text-slate-200 mb-1 flex items-center gap-1.5"><span class="w-5 h-5 bg-rose-950 text-rose-400 rounded-full flex items-center justify-center text-xs">1</span> Apunta directamente</h4>
+                <p class="leading-relaxed">Los trazos de lápiz se dirigen de forma continua hacia tu cursor en pantalla. ¡Muévete con WASD y usa el ratón para asestar cada golpe al jefe!</p>
+            </div>
+            <div>
+                <h4 class="font-bold text-slate-200 mb-1 flex items-center gap-1.5"><span class="w-5 h-5 bg-rose-950 text-rose-400 rounded-full flex items-center justify-center text-xs">2</span> Pociones y Súper Habilidad</h4>
+                <p class="leading-relaxed">Si estás bajo de vida, haz clic en el vial de tinta o presiona <strong>E</strong> para usar una de tus 4 pociones de restauración total. Presiona <strong>Q</strong> cuando tu súper cargue al máximo.</p>
+            </div>
+        </div>
+        <button onclick="closeInstructionsModal()" class="w-full mt-6 py-2.5 bg-rose-600 hover:bg-rose-500 transition rounded-xl text-xs font-bold text-white shadow-lg">
+            ¡Entendido!
+        </button>
+    </div>
+</div>
+
+<footer class="p-4 text-center text-slate-600 text-[10px] md:text-xs border-t border-slate-900 z-10 bg-slate-950/20">
+    Desarrollado para Artistas Principiantes • Domina las bases del Dibujo sobre los Escombros de la Ciudad
+</footer>
+
+<script>
+    // Variables de UI
+    const menuScreen = document.getElementById('menu-screen');
+    const customizeScreen = document.getElementById('customize-screen');
+    const gameScreen = document.getElementById('game-screen');
+    const endScreen = document.getElementById('end-screen');
+    const canvas = document.getElementById('arena-canvas');
+    const ctx = canvas.getContext('2d');
+    
+    const uiCurrentLevel = document.getElementById('ui-current-level');
+    const uiBossActiveName = document.getElementById('ui-boss-active-name');
+    const uiPlayerHp = document.getElementById('ui-player-hp');
+    const uiPlayerHpBar = document.getElementById('ui-player-hp-bar');
+    const uiBossHp = document.getElementById('ui-boss-hp');
+    const uiBossHpBar = document.getElementById('ui-boss-hp-bar');
+    const uiDamageStatus = document.getElementById('ui-damage-status');
+    const uiLevelTitle = document.getElementById('ui-level-title');
+
+    const uiPotionCount = document.getElementById('ui-potion-count');
+    const uiSuperBar = document.getElementById('ui-super-bar');
+    const uiSuperText = document.getElementById('ui-super-text');
+    const uiSuperButton = document.getElementById('ui-super-button');
+
+    const gameCombatPhase = document.getElementById('game-combat-phase');
+    const gameTriviaPhase = document.getElementById('game-trivia-phase');
+    const uiTriviaQuestion = document.getElementById('ui-trivia-question');
+    const uiTriviaOptions = document.getElementById('ui-trivia-options');
+    const uiTriviaFeedback = document.getElementById('ui-trivia-feedback');
+    const uiTriviaFeedbackTitle = document.getElementById('ui-trivia-feedback-title');
+    const uiTriviaFeedbackText = document.getElementById('ui-trivia-feedback-text');
+    const uiTriviaContinue = document.getElementById('ui-trivia-continue');
+    const canvasModeIndicator = document.getElementById('canvas-mode-indicator');
+    const uiMimicAlert = document.getElementById('ui-mimic-alert');
+
+    // MÚSICA MUTED/PLAY
+    function toggleMute() {
+        initAudio();
+        isMuted = !isMuted;
+        const icon = document.getElementById('music-icon');
+        const text = document.getElementById('music-text');
+        
+        if (isMuted) {
+            icon.className = "fa-solid fa-volume-xmark text-red-400";
+            text.innerText = "Música: Silenciada";
+            bgNodes.forEach(node => {
+                try { node.disconnect(); } catch (e) {}
+            });
+            bgNodes = [];
+        } else {
+            icon.className = "fa-solid fa-volume-high text-emerald-400 animate-pulse";
+            text.innerText = "Música: Sonando";
+            audioCtx.resume().then(() => {
+                startBgMusic();
+            });
+        }
+    }
+
+    // MODAL DE INSTRUCCIONES
+    function showInstructionsModal() {
+        document.getElementById('instructions-modal').classList.remove('hidden');
+    }
+    function closeInstructionsModal() {
+        document.getElementById('instructions-modal').classList.add('hidden');
+    }
+
+    // TECLADO Y CONTROLES
+    window.addEventListener('keydown', e => { 
+        keys[e.key.toLowerCase()] = true; 
+        if (e.key.toLowerCase() === 'e') {
+            drinkPotion();
+        }
+        if (e.key.toLowerCase() === 'q' || e.key === ' ') {
+            activateSuper();
+        }
+    });
+    window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
+
+    // Rastreo de Posición de Mouse y Táctil para apuntar
+    canvas.addEventListener('mousemove', handlePointerMove);
+    canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
+    canvas.addEventListener('touchstart', handleTouchMove, { passive: false });
+
+    function handlePointerMove(e) {
+        const rect = canvas.getBoundingClientRect();
+        aimX = ((e.clientX - rect.left) / rect.width) * canvas.width;
+        aimY = ((e.clientY - rect.top) / rect.height) * canvas.height;
+    }
+
+    function handleTouchMove(e) {
+        if (gameState !== "COMBAT") return;
+        e.preventDefault();
+        const rect = canvas.getBoundingClientRect();
+        const touch = e.touches[0];
+        
+        // Movimiento relativo por toque directo y apuntado al jefe por defecto en móviles si solo hay un toque
+        const tX = ((touch.clientX - rect.left) / rect.width) * canvas.width;
+        const tY = ((touch.clientY - rect.top) / rect.height) * canvas.height;
+        
+        // El jugador se mueve directo hacia donde toca para accesibilidad móvil
+        player.x += (tX - player.x) * 0.15;
+        player.y += (tY - player.y) * 0.15;
+        if (tX < player.x) player.dir = -1;
+        else player.dir = 1;
+
+        // El apuntado móvil va directo hacia el jefe principal para facilitar el combate táctil
+        aimX = boss.x;
+        aimY = boss.y;
+    }
+
+    // Inicializar elementos flotantes de fondo en la ciudad destruida (humo, escombros ligeros)
+    function initCityBackground() {
+        backgroundDebris = [];
+        for (let i = 0; i < 20; i++) {
+            backgroundDebris.push({
+                x: Math.random() * canvas.width,
+                y: Math.random() * canvas.height,
+                size: Math.random() * 3 + 1,
+                speedY: -(Math.random() * 0.4 + 0.1),
+                speedX: (Math.random() - 0.5) * 0.2,
+                opacity: Math.random() * 0.5 + 0.1
+            });
+        }
+    }
+</script>
+
+<script>
+    function goToCustomize() {
+        menuScreen.classList.add('hidden');
+        customizeScreen.classList.remove('hidden');
+        updateCustomizePreview();
+    }
+
+    function selectColor(color, fillColor) {
+        customColor = color;
+        customFillColor = fillColor;
+        updateCustomizePreview();
+    }
+
+    function selectShape(shape) {
+        customShape = shape;
+        
+        // Actualizar visual de botones de selección
+        document.querySelectorAll("[id^='shape-']").forEach(btn => {
+            btn.classList.remove('border-indigo-500', 'bg-indigo-950/40', 'text-white');
+            btn.classList.add('border-slate-800', 'bg-slate-900', 'text-slate-300');
+        });
+        
+        const activeBtn = document.getElementById(`shape-${shape}`);
+        if (activeBtn) {
+            activeBtn.classList.add('border-indigo-500', 'bg-indigo-950/40', 'text-white');
+            activeBtn.classList.remove('border-slate-800', 'bg-slate-900', 'text-slate-300');
+        }
+        updateCustomizePreview();
+    }
+
+    function updateCustomizePreview() {
+        const previewDiv = document.getElementById('customize-preview');
+        previewDiv.innerHTML = "";
+        
+        // Crear representación simple SVG o div con el color seleccionado
+        const innerElement = document.createElement('div');
+        innerElement.className = "w-8 h-8 rounded-full animate-pulse shadow-lg";
+        innerElement.style.backgroundColor = customColor;
+        innerElement.style.border = `2px solid ${customFillColor}`;
+        
+        // Añadir icono interior representativo de la forma
+        const icon = document.createElement('i');
+        icon.className = "text-white text-xs block text-center pt-2 fa-solid";
+        if (customShape === 'mannequin') icon.classList.add('fa-user');
+        else if (customShape === 'sphere') icon.classList.add('fa-circle');
+        else if (customShape === 'box') icon.classList.add('fa-square');
+        else icon.classList.add('fa-crosshairs');
+        
+        innerElement.appendChild(icon);
+        previewDiv.appendChild(innerElement);
+    }
+</script>
+
+<script>
+    function drinkPotion() {
+        if (potionsCount > 0 && playerHp < playerMaxHp && gameState === "COMBAT") {
+            potionsCount--;
+            playerHp = playerMaxHp; // Restaura al completo
+            playHealSound();
+            createSplatter(player.x, player.y, "#2dd4bf");
+            
+            // Animación y efectos en pantalla
+            document.body.classList.add('brightness-125');
+            setTimeout(() => document.body.classList.remove('brightness-125'), 200);
+
+            updateHpBars();
+        }
+    }
+
+    function activateSuper() {
+        if (superCharge >= maxSuperCharge && gameState === "COMBAT" && superDuration <= 0) {
+            superCharge = 0;
+            superDuration = 180; // Dura 3 segundos de juego (180 ticks a 60fps)
+            playSuperSound();
+
+            // Limpiar todos los proyectiles enemigos del lienzo
+            bossProjectiles = [];
+            
+            // Generar ráfaga masiva de partículas expansivas
+            for (let i = 0; i < 30; i++) {
+                const angle = (i / 30) * Math.PI * 2;
+                particles.push({
+                    x: player.x,
+                    y: player.y,
+                    vx: Math.cos(angle) * 7,
+                    vy: Math.sin(angle) * 7,
+                    life: 30,
+                    color: customColor,
+                    radius: 5
+                });
+            }
+
+            // Daño directo masivo al jefe
+            currentBossHp = Math.max(0, currentBossHp - 35);
+            updateHpBars();
+            
+            if (currentBossHp <= 0) {
+                handleBossDefeat();
+            }
+        }
+    }
+</script>
+
+<script>
+    function startGame() {
+        menuScreen.classList.add('hidden');
+        customizeScreen.classList.add('hidden');
+        gameScreen.classList.remove('hidden');
+        endScreen.classList.add('hidden');
+        
+        currentLevelIdx = 0;
+        playerHp = playerMaxHp;
+        hasNerf = false;
+        playerDamageMultiplier = 1.0;
+        potionsCount = 4;
+        superCharge = 0;
+        superDuration = 0;
+        
+        initCityBackground();
+        loadLevel();
+    }
+
+    function loadLevel() {
+        const levelData = gameLevels[currentLevelIdx];
+        
+        uiCurrentLevel.innerText = levelData.id;
+        uiLevelTitle.innerText = levelData.subtitle;
+        uiBossActiveName.innerText = levelData.bossName;
+        currentBossMaxHp = levelData.bossMaxHp;
+        currentBossHp = currentBossMaxHp;
+        
+        player.x = canvas.width / 2;
+        player.y = canvas.height - 60;
+        boss.x = canvas.width / 2;
+        boss.y = 60;
+        boss.dir = 1;
+        boss.isMimicking = false;
+        boss.mimicTimer = 0;
+        boss.nextMimicTimer = 240; 
+        boss.attackCooldown = 0;
+        boss.specialCooldown = 0; // Inicializar temporizador de ataque especial
+        
+        playerProjectiles = [];
+        bossProjectiles = [];
+        redTelegraphs = [];
+        particles = [];
+        uiMimicAlert.classList.add('hidden');
+        
+        updateHpBars();
+        
+        gameState = "COMBAT";
+        canvasModeIndicator.innerText = "Modo Combate";
+        canvasModeIndicator.className = "text-rose-400";
+        
+        gameCombatPhase.classList.remove('hidden');
+        gameTriviaPhase.classList.add('hidden');
+    }
+</script>
+
+<script>
+    function updateBossBehavior() {
+        const levelData = gameLevels[currentLevelIdx];
+        boss.attackCooldown++;
+        boss.nextMimicTimer--;
+
+        // Avanzar el acumulador del ataque especial
+        boss.specialCooldown = (boss.specialCooldown || 0) + 1;
+        const specialAlert = document.getElementById('ui-special-alert');
+        
+        // Alerta visual 1 segundo (60 frames) antes de que caiga el golpe especial
+        if (boss.specialCooldown > 340 && boss.specialCooldown <= 400) {
+            if (specialAlert) specialAlert.classList.remove('hidden');
+        } else {
+            if (specialAlert) specialAlert.classList.add('hidden');
+        }
+
+        // Lanzar ataque supremo de baja frecuencia (aproximadamente cada 6.6 segundos)
+        if (boss.specialCooldown > 400) {
+            boss.specialCooldown = 0;
+            playMimicSound(); // Sonido inestable de alerta
+            
+            // Bomba gigante dirigida exactamente a la posición del jugador
+            redTelegraphs.push({
+                type: "mega_bomb",
+                x: player.x,
+                y: player.y,
+                radius: 125 + (currentLevelIdx * 5), // Aumenta levemente el radio con el nivel
+                timer: Math.max(70, 105 - (currentLevelIdx * 6)), // Se telegrafía más rápido en niveles altos
+                maxTimer: Math.max(70, 105 - (currentLevelIdx * 6)),
+                isSpecial: true
+            });
+        }
+
+        // LÓGICA DE MIMETISMO
+        if (boss.isMimicking) {
+            boss.mimicTimer--;
+            
+            // Perseguir activamente al jugador
+            const angleToPlayer = Math.atan2(player.y - boss.y, player.x - boss.x);
+            const mimicSpeed = levelData.baseSpeed * 1.35; 
+            boss.x += Math.cos(angleToPlayer) * mimicSpeed;
+            boss.y += Math.sin(angleToPlayer) * mimicSpeed;
+
+            // Disparo continuo de clones en ráfagas rápidas de lápiz oscuro
+            if (boss.attackCooldown % 15 === 0) {
+                playShootSound();
+                bossProjectiles.push({
+                    x: boss.x,
+                    y: boss.y + 10,
+                    vx: Math.cos(angleToPlayer) * 4.5,
+                    vy: Math.sin(angleToPlayer) * 4.5,
+                    radius: 5,
+                    color: "#f43f5e" 
+                });
+            }
+
+            if (boss.mimicTimer <= 0) {
+                boss.isMimicking = false;
+                boss.nextMimicTimer = 300 - (currentLevelIdx * 25); 
+                uiMimicAlert.classList.add('hidden');
+            }
+        } else {
+            // Jefe Normal
+            if (boss.nextMimicTimer <= 0) {
+                boss.isMimicking = true;
+                boss.mimicTimer = 180 + (currentLevelIdx * 20); 
+                boss.attackCooldown = 0;
+                uiMimicAlert.classList.remove('hidden');
+                playMimicSound();
+                createSplatter(boss.x, boss.y, "#ef4444");
+            }
+
+            boss.x += levelData.baseSpeed * boss.dir;
+            if (boss.x < 50 || boss.x > canvas.width - 50) {
+                boss.dir *= -1;
+            }
+            if (boss.y > 80) boss.y -= 0.5;
+
+            const interval = Math.max(30, levelData.telegraphInterval);
+
+            if (boss.attackCooldown > interval) {
+                boss.attackCooldown = 0;
+
+                // Ondas de choque circulares
+                const wavesCount = currentLevelIdx >= 3 ? 2 : 1;
+                for (let i = 0; i < wavesCount; i++) {
+                    redTelegraphs.push({
+                        type: "shockwave",
+                        x: i === 0 ? Math.random() * (canvas.width - 120) + 60 : player.x + (Math.random() - 0.5) * 80,
+                        y: Math.random() * (canvas.height - 180) + 140,
+                        radius: 55 + (currentLevelIdx * 3), 
+                        timer: Math.max(30, 75 - (currentLevelIdx * 4)), 
+                        maxTimer: Math.max(30, 75 - (currentLevelIdx * 4))
+                    });
+                }
+
+                // Láseres horizontales
+                if (currentLevelIdx >= 1 && Math.random() > 0.4) {
+                    redTelegraphs.push({
+                        type: "laser_horizontal",
+                        y: player.y - 15 + (Math.random() - 0.5) * 20,
+                        height: 25 + (currentLevelIdx * 2),
+                        timer: Math.max(40, 80 - (currentLevelIdx * 5)),
+                        maxTimer: Math.max(40, 80 - (currentLevelIdx * 5))
+                    });
+                }
+
+                // Hilos verticales de caída
+                if (currentLevelIdx >= 2 && Math.random() > 0.5) {
+                    redTelegraphs.push({
+                        type: "vertical_string",
+                        x: player.x,
+                        width: 20 + currentLevelIdx * 2,
+                        timer: Math.max(35, 55 - (currentLevelIdx * 3)),
+                        maxTimer: Math.max(35, 55 - (currentLevelIdx * 3))
+                    });
+                }
+            }
+
+            // Proyectiles dirigidos en niveles medios/altos
+            if (currentLevelIdx >= 1 && boss.attackCooldown % 40 === 0) {
+                const angle = Math.atan2(player.y - boss.y, player.x - boss.x);
+                bossProjectiles.push({
+                    x: boss.x,
+                    y: boss.y,
+                    vx: Math.cos(angle) * (3.5 + currentLevelIdx * 0.3),
+                    vy: Math.sin(angle) * (3.5 + currentLevelIdx * 0.3),
+                    radius: 5,
+                    color: "#9333ea"
+                });
+            }
+        }
+    }
+</script>
+
+<script>
+    function updateGamePhysics() {
+        if (gameState !== "COMBAT") return;
+
+        // Movimiento de personaje por teclado
+        let moveX = 0;
+        let moveY = 0;
+
+        if (keys['w'] || keys['arrowup']) moveY = -1;
+        if (keys['s'] || keys['arrowdown']) moveY = 1;
+        if (keys['a'] || keys['arrowleft']) { moveX = -1; player.dir = -1; }
+        if (keys['d'] || keys['arrowright']) { moveX = 1; player.dir = 1; }
+
+        if (moveX !== 0 || moveY !== 0) {
+            player.x += moveX * player.speed;
+            player.y += moveY * player.speed;
+        }
+
+        // Límites de la pantalla de combate
+        player.x = Math.max(player.radius, Math.min(canvas.width - player.radius, player.x));
+        player.y = Math.max(120, Math.min(canvas.height - player.radius, player.y)); 
+
+        // Manejar tiempo de la Súper Habilidad activa
+        if (superDuration > 0) {
+            superDuration--;
+        }
+
+        // Disparar trazos hacia la mira del cursor (aimX, aimY)
+        player.shootCooldown++;
+        const cooldownLimit = superDuration > 0 ? 5 : 14; // Disparo ultra rápido si la súper está activa
+        
+        if (player.shootCooldown > cooldownLimit) {
+            player.shootCooldown = 0;
+            playShootSound();
+            
+            // Calcular dirección exacta del proyectil al objetivo
+            const angle = Math.atan2(aimY - player.y, aimX - player.x);
+            const bulletSpeed = superDuration > 0 ? 9.0 : 6.5;
+
+            playerProjectiles.push({
+                x: player.x,
+                y: player.y - player.radius,
+                vx: Math.cos(angle) * bulletSpeed,
+                vy: Math.sin(angle) * bulletSpeed,
+                width: 4,
+                height: 12,
+                angle: angle
+            });
+        }
+
+        // Actualizar proyectiles del jugador con cálculo de vectores
+        for (let i = playerProjectiles.length - 1; i >= 0; i--) {
+            const p = playerProjectiles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            
+            // Colisión con jefe
+            if (p.x > boss.x - boss.width/2 && p.x < boss.x + boss.width/2 &&
+                p.y > boss.y - boss.height/2 && p.y < boss.y + boss.height/2) {
+                
+                const baseDmg = 2.4; 
+                const dmg = baseDmg * playerDamageMultiplier;
+                currentBossHp = Math.max(0, currentBossHp - dmg);
+                
+                createSplatter(p.x, p.y, customColor);
+                
+                // Cargar Súper Habilidad al golpear
+                if (superCharge < maxSuperCharge) {
+                    superCharge = Math.min(maxSuperCharge, superCharge + 2);
+                }
+
+                playerProjectiles.splice(i, 1);
+                updateHpBars();
+
+                if (currentBossHp <= 0) {
+                    handleBossDefeat();
+                    return;
+                }
+                continue;
+            }
+
+            // Fuera de límites
+            if (p.y < 0 || p.y > canvas.height || p.x < 0 || p.x > canvas.width) {
+                playerProjectiles.splice(i, 1);
+            }
+        }
+
+        // Detonar telégrafos de aviso rojos
+        for (let i = redTelegraphs.length - 1; i >= 0; i--) {
+            const tel = redTelegraphs[i];
+            tel.timer--;
+
+            if (tel.timer <= 0) {
+                if (tel.type === "shockwave") {
+                    for (let pIdx = 0; pIdx < 10; pIdx++) {
+                        const angle = (pIdx / 10) * Math.PI * 2;
+                        particles.push({
+                            x: tel.x,
+                            y: tel.y,
+                            vx: Math.cos(angle) * 2.8,
+                            vy: Math.sin(angle) * 2.8,
+                            life: 20,
+                            color: "#ef4444",
+                            radius: 3.5
+                        });
+                    }
+                    const dist = Math.hypot(player.x - tel.x, player.y - tel.y);
+                    if (dist < tel.radius + player.radius) {
+                        applyDamageToPlayer(14);
+                    }
+                } 
+                else if (tel.type === "laser_horizontal") {
+                    createLaserSmoke(tel.y, tel.height);
+                    if (player.y > tel.y && player.y < tel.y + tel.height) {
+                        applyDamageToPlayer(18);
+                    }
+                }
+                else if (tel.type === "vertical_string") {
+                    createVerticalLaserSmoke(tel.x, tel.width);
+                    if (Math.abs(player.x - tel.x) < tel.width/2 + player.radius) {
+                        applyDamageToPlayer(16);
+                    }
+                }
+                else if (tel.type === "mega_bomb") {
+                    // Explosión de partículas gigantes en ráfaga de tinta roja
+                    for (let pIdx = 0; pIdx < 28; pIdx++) {
+                        const angle = (pIdx / 28) * Math.PI * 2;
+                        particles.push({
+                            x: tel.x,
+                            y: tel.y,
+                            vx: Math.cos(angle) * 5.5,
+                            vy: Math.sin(angle) * 5.5,
+                            life: 30,
+                            color: "#f43f5e",
+                            radius: 5
+                        });
+                    }
+                    const dist = Math.hypot(player.x - tel.x, player.y - tel.y);
+                    if (dist < tel.radius + player.radius) {
+                        applyDamageToPlayer(42, true); // Devastador daño de ataque especial
+                    }
+                }
+                redTelegraphs.splice(i, 1);
+            }
+        }
+
+        // Actualizar proyectiles de los jefes
+        for (let i = bossProjectiles.length - 1; i >= 0; i--) {
+            const bp = bossProjectiles[i];
+            bp.x += bp.vx;
+            bp.y += bp.vy;
+
+            const dist = Math.hypot(player.x - bp.x, player.y - bp.y);
+            if (dist < player.radius + bp.radius) {
+                applyDamageToPlayer(8 + (currentLevelIdx * 0.5)); 
+                bossProjectiles.splice(i, 1);
+                continue;
+            }
+
+            if (bp.y > canvas.height || bp.x < 0 || bp.x > canvas.width) {
+                bossProjectiles.splice(i, 1);
+            }
+        }
+
+        // Actualizar partículas
+        for (let i = particles.length - 1; i >= 0; i--) {
+            const pt = particles[i];
+            pt.x += pt.vx;
+            pt.y += pt.vy;
+            pt.life--;
+            if (pt.life <= 0) particles.splice(i, 1);
+        }
+
+        // Fondo atmosférico
+        backgroundDebris.forEach(deb => {
+            deb.y += deb.speedY;
+            deb.x += deb.speedX;
+            if (deb.y < 0) {
+                deb.y = canvas.height;
+                deb.x = Math.random() * canvas.width;
+            }
+        });
+    }
+
+    function applyDamageToPlayer(amount, isSpecial = false) {
+        // Multiplicador de escala de daño por nivel (+20% por nivel transcurrido)
+        const damageMultiplier = 1.0 + (currentLevelIdx * 0.20);
+        const finalDamage = amount * damageMultiplier;
+
+        playerHp = Math.max(0, playerHp - finalDamage);
+        playHurtSound();
+        document.body.classList.add('damage-shake');
+        setTimeout(() => document.body.classList.remove('damage-shake'), 300);
+        updateHpBars();
+
+        if (playerHp <= 0) {
+            endGame(false);
+        }
+    }
+</script>
+
+<script>
+    function createSplatter(x, y, color) {
+        for (let i = 0; i < 6; i++) {
+            particles.push({
+                x: x,
+                y: y,
+                vx: (Math.random() - 0.5) * 3.5,
+                vy: (Math.random() - 0.5) * 3.5,
+                life: 18,
+                color: color,
+                radius: Math.random() * 2.5 + 1
+            });
+        }
+    }
+
+    function createLaserSmoke(y, height) {
+        for (let i = 0; i < canvas.width; i += 50) {
+            particles.push({
+                x: i,
+                y: y + Math.random() * height,
+                vx: 0,
+                vy: (Math.random() - 0.5) * 0.8,
+                life: 16,
+                color: "rgba(239, 68, 68, 0.6)",
+                radius: Math.random() * 4 + 1.5
+            });
+        }
+    }
+
+    function createVerticalLaserSmoke(x, width) {
+        for (let i = 0; i < canvas.height; i += 50) {
+            particles.push({
+                x: x + (Math.random() - 0.5) * width,
+                y: i,
+                vx: (Math.random() - 0.5) * 0.8,
+                vy: 0,
+                life: 16,
+                color: "rgba(239, 68, 68, 0.6)",
+                radius: Math.random() * 4 + 1.5
+            });
+        }
+    }
+
+    function updateHpBars() {
+        // Vida Jugador
+        uiPlayerHp.innerText = `${Math.round(playerHp)} / ${playerMaxHp}`;
+        const playerHpPercent = (playerHp / playerMaxHp) * 100;
+        uiPlayerHpBar.style.width = `${playerHpPercent}%`;
+        
+        if (playerHpPercent > 50) {
+            uiPlayerHpBar.className = "h-full bg-emerald-500 transition-all duration-300";
+        } else if (playerHpPercent > 20) {
+            uiPlayerHpBar.className = "h-full bg-amber-500 transition-all duration-300";
+        } else {
+            uiPlayerHpBar.className = "h-full bg-rose-500 transition-all duration-300 animate-pulse";
+        }
+
+        // Vida Jefe
+        uiBossHp.innerText = `${Math.round(currentBossHp)} / ${currentBossMaxHp}`;
+        const bossHpPercent = (currentBossHp / currentBossMaxHp) * 100;
+        uiBossHpBar.style.width = `${bossHpPercent}%`;
+
+        // HUD Pociones
+        uiPotionCount.innerText = potionsCount;
+        if (potionsCount <= 0) {
+            document.getElementById('ui-potion-button').classList.add('opacity-40');
+        } else {
+            document.getElementById('ui-potion-button').classList.remove('opacity-40');
+        }
+
+        // HUD Súper
+        uiSuperBar.style.width = `${superCharge}%`;
+        if (superCharge >= maxSuperCharge) {
+            uiSuperText.innerText = "¡SÚPER LISTO! [Q]";
+            uiSuperButton.className = "flex flex-col items-center justify-center p-3 bg-indigo-950 border-2 border-indigo-500 rounded-2xl active:scale-95 transition rainbow-pulse cursor-pointer";
+        } else {
+            if (superDuration > 0) {
+                uiSuperText.innerText = "¡SÚPER ACTIVO!";
+                uiSuperButton.className = "flex flex-col items-center justify-center p-3 bg-indigo-900 border border-indigo-700 rounded-2xl animate-pulse";
+            } else {
+                uiSuperText.innerText = `CARGANDO (${superCharge}%)`;
+                uiSuperButton.className = "flex flex-col items-center justify-center p-3 bg-slate-950 border border-slate-800 rounded-2xl";
+            }
+        }
+
+        // Poder de Daño
+        if (hasNerf) {
+            uiDamageStatus.innerHTML = `<i class="fa-solid fa-triangle-exclamation"></i> 60% (Fuerza de trazo debilitada)`;
+            uiDamageStatus.className = "flex items-center gap-1.5 font-bold text-rose-400 animate-pulse";
+        } else {
+            uiDamageStatus.innerHTML = `<i class="fa-solid fa-bolt"></i> 100% (Fuerza normal)`;
+            uiDamageStatus.className = "flex items-center gap-1.5 font-bold text-emerald-400";
+        }
+    }
+</script>
+
+<script>
+    function drawDestroyedCityBackground() {
+        // Cielo degradado oscuro de desastre
+        const skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+        skyGrad.addColorStop(0, '#090911');
+        skyGrad.addColorStop(1, '#111224');
+        ctx.fillStyle = skyGrad;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        // Renderizar polvo atmosférico flotando
+        ctx.fillStyle = 'rgba(244, 63, 94, 0.15)';
+        backgroundDebris.forEach(deb => {
+            ctx.beginPath();
+            ctx.arc(deb.x, deb.y, deb.size, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Siluetas lejanas de rascacielos colapsando (Pencil Sketch grisáceo)
+        ctx.strokeStyle = 'rgba(100, 116, 139, 0.15)';
+        ctx.lineWidth = 1.5;
+
+        // Rascacielos 1
+        ctx.beginPath();
+        ctx.moveTo(80, canvas.height);
+        ctx.lineTo(90, 180);
+        ctx.lineTo(150, 195);
+        ctx.lineTo(145, canvas.height);
+        ctx.stroke();
+
+        // Ventanitas rotas e inclinadas
+        for (let h = 210; h < canvas.height - 30; h += 30) {
+            ctx.beginPath();
+            ctx.moveTo(102, h);
+            ctx.lineTo(135, h + 8);
+            ctx.stroke();
+        }
+
+        // Rascacielos 2 (Gran torre agrietada)
+        ctx.beginPath();
+        ctx.moveTo(420, canvas.height);
+        ctx.lineTo(440, 100);
+        ctx.lineTo(495, 115);
+        ctx.lineTo(510, canvas.height);
+        ctx.stroke();
+
+        ctx.strokeStyle = 'rgba(239, 68, 68, 0.12)';
+        ctx.beginPath();
+        ctx.moveTo(445, 130);
+        ctx.lineTo(475, 190);
+        ctx.lineTo(460, 240);
+        ctx.lineTo(490, 310);
+        ctx.stroke();
+
+        // Escombros en el suelo
+        ctx.strokeStyle = 'rgba(100, 116, 139, 0.2)';
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
+        ctx.beginPath();
+        ctx.moveTo(0, canvas.height - 15);
+        ctx.lineTo(120, canvas.height - 25);
+        ctx.lineTo(260, canvas.height - 10);
+        ctx.lineTo(380, canvas.height - 35);
+        ctx.lineTo(500, canvas.height - 15);
+        ctx.lineTo(canvas.width, canvas.height - 20);
+        ctx.lineTo(canvas.width, canvas.height);
+        ctx.lineTo(0, canvas.height);
+        ctx.closePath();
+        ctx.fill();
+        ctx.stroke();
+    }
+</script>
+
+<script>
+    function drawCombatScene() {
+        drawDestroyedCityBackground();
+
+        // Dibujar telégrafos de advertencia rojos
+        redTelegraphs.forEach(tel => {
+            ctx.fillStyle = tel.isSpecial ? "rgba(244, 63, 94, 0.32)" : "rgba(239, 68, 68, 0.22)";
+            ctx.strokeStyle = tel.isSpecial ? "#f43f5e" : "rgba(239, 68, 68, 0.7)";
+            ctx.lineWidth = tel.isSpecial ? 3.5 : 2;
+            
+            const fillRatio = (tel.maxTimer - tel.timer) / tel.maxTimer;
+
+            if (tel.type === "shockwave" || tel.type === "mega_bomb") {
+                ctx.beginPath();
+                ctx.arc(tel.x, tel.y, tel.radius, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.stroke();
+
+                ctx.fillStyle = tel.isSpecial ? "rgba(244, 63, 94, 0.55)" : "rgba(239, 68, 68, 0.4)";
+                ctx.beginPath();
+                ctx.arc(tel.x, tel.y, tel.radius * fillRatio, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Cruz de peligro distintiva para ataques especiales
+                if (tel.isSpecial) {
+                    ctx.strokeStyle = "rgba(255, 255, 255, 0.6)";
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.moveTo(tel.x - 25, tel.y); ctx.lineTo(tel.x + 25, tel.y);
+                    ctx.moveTo(tel.x, tel.y - 25); ctx.lineTo(tel.x, tel.y + 25);
+                    ctx.stroke();
+                }
+            } 
+            else if (tel.type === "laser_horizontal") {
+                ctx.fillRect(0, tel.y, canvas.width, tel.height);
+                ctx.strokeRect(0, tel.y, canvas.width, tel.height);
+
+                ctx.fillStyle = "rgba(239, 68, 68, 0.45)";
+                ctx.fillRect(0, tel.y, canvas.width * fillRatio, tel.height);
+            }
+            else if (tel.type === "vertical_string") {
+                ctx.fillRect(tel.x - tel.width/2, 0, tel.width, canvas.height);
+                ctx.strokeRect(tel.x - tel.width/2, 0, tel.width, canvas.height);
+
+                ctx.fillStyle = "rgba(239, 68, 68, 0.45)";
+                ctx.fillRect(tel.x - tel.width/2, canvas.height * (1 - fillRatio), tel.width, canvas.height * fillRatio);
+            }
+        });
+
+        // RENDERIZAR MIRA TÁCTICA DEL JUGADOR
+        ctx.save();
+        ctx.strokeStyle = "rgba(255, 255, 255, 0.15)";
+        ctx.setLineDash([5, 5]);
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(player.x, player.y);
+        ctx.lineTo(aimX, aimY);
+        ctx.stroke();
+        ctx.restore();
+
+        // Dibujar indicador de retícula pequeña en la mira
+        ctx.strokeStyle = customColor;
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(aimX, aimY, 6, 0, Math.PI * 2);
+        ctx.stroke();
+
+        // RENDERIZAR JUGADOR SEGÚN CUSTOMIZACIÓN
+        drawCustomPlayer(player.x, player.y, player.dir);
+
+        // RENDERIZAR ENEMIGO
+        if (boss.isMimicking) {
+            const angleToPlayer = Math.atan2(player.y - boss.y, player.x - boss.x);
+            const bossFaceDir = Math.cos(angleToPlayer) >= 0 ? 1 : -1;
+            
+            ctx.fillStyle = "rgba(244, 63, 94, 0.15)";
+            ctx.beginPath();
+            ctx.arc(boss.x, boss.y, 22, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Dibujar mímica en color rojo destructivo adaptado a la forma del jugador
+            drawCustomPlayer(boss.x, boss.y, bossFaceDir, true);
+        } else {
+            drawBossOriginalShape();
+        }
+
+        // Proyectiles del jugador (con ángulo de orientación)
+        ctx.save();
+        playerProjectiles.forEach(p => {
+            ctx.fillStyle = customColor;
+            ctx.translate(p.x, p.y);
+            ctx.rotate(p.angle);
+            ctx.fillRect(-p.width/2, -p.height/2, p.width, p.height);
+            ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset rotación
+        });
+        ctx.restore();
+
+        // Proyectiles del jefe
+        bossProjectiles.forEach(bp => {
+            ctx.fillStyle = bp.color;
+            ctx.beginPath();
+            ctx.arc(bp.x, bp.y, bp.radius, 0, Math.PI * 2);
+            ctx.fill();
+        });
+
+        // Partículas decorativas
+        particles.forEach(pt => {
+            ctx.fillStyle = pt.color;
+            ctx.beginPath();
+            ctx.arc(pt.x, pt.y, pt.radius, 0, Math.PI * 2);
+            ctx.fill();
+        });
+    }
+
+    // Dibujar el modelo de maniquí o forma según la personalización
+    function drawCustomPlayer(x, y, dir, isMimic = false) {
+        const strokeColor = isMimic ? "#f43f5e" : customColor;
+        const fillColor = isMimic ? "#4c0519" : customFillColor;
+        
+        ctx.strokeStyle = strokeColor;
+        ctx.fillStyle = fillColor;
+        ctx.lineWidth = 3;
+
+        // Efecto aura para la súper activa
+        if (superDuration > 0 && !isMimic) {
+            ctx.save();
+            ctx.strokeStyle = "rgba(255, 255, 255, 0.3)";
+            ctx.beginPath();
+            ctx.arc(x, y, player.radius + 6, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        if (customShape === 'mannequin') {
+            // CABEZA
+            ctx.beginPath();
+            ctx.arc(x, y - 12, 6, 0, Math.PI*2);
+            ctx.fill();
+            ctx.stroke();
+
+            // TORSO
+            ctx.beginPath();
+            ctx.moveTo(x, y - 6);
+            ctx.lineTo(x, y + 6);
+            ctx.stroke();
+
+            // HOMBROS
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.moveTo(x - 9, y - 4);
+            ctx.lineTo(x + 9, y - 4);
+            ctx.stroke();
+
+            // EXTREMIDADES (Piernas animadas ligeramente por dirección)
+            ctx.beginPath();
+            ctx.moveTo(x, y + 6);
+            ctx.lineTo(x - 7 * dir, y + 14);
+            ctx.moveTo(x, y + 6);
+            ctx.lineTo(x + 7 * dir, y + 14);
+            ctx.stroke();
+        } 
+        else if (customShape === 'sphere') {
+            // Forma de Esfera Artística de Guía
+            ctx.beginPath();
+            ctx.arc(x, y, 12, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            // Líneas interiores de proporción de esfera 3D abocetada
+            ctx.strokeStyle = isMimic ? "rgba(244, 63, 94, 0.4)" : "rgba(255, 255, 255, 0.3)";
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(x, y, 8, 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(x - 12, y);
+            ctx.lineTo(x + 12, y);
+            ctx.moveTo(x, y - 12);
+            ctx.lineTo(x, y + 12);
+            ctx.stroke();
+        } 
+        else if (customShape === 'box') {
+            // Forma de Cubo rígido de dibujo volumétrico
+            ctx.beginPath();
+            ctx.rect(x - 10, y - 10, 20, 20);
+            ctx.fill();
+            ctx.stroke();
+
+            // Línea interior de perspectiva
+            ctx.strokeStyle = isMimic ? "rgba(244, 63, 94, 0.4)" : "rgba(255, 255, 255, 0.3)";
+            ctx.lineWidth = 1.5;
+            ctx.beginPath();
+            ctx.moveTo(x - 10, y - 10);
+            ctx.lineTo(x + 10, y + 10);
+            ctx.stroke();
+        } 
+        else {
+            // Cruz Guía de proporciones planas
+            ctx.beginPath();
+            ctx.arc(x, y, 5, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+            
+            ctx.beginPath();
+            ctx.moveTo(x - 14, y);
+            ctx.lineTo(x + 14, y);
+            ctx.moveTo(x, y - 14);
+            ctx.lineTo(x, y + 14);
+            ctx.stroke();
+        }
+    }
+
+    // Dibujar las siluetas de los enemigos en estado normal
+    function drawBossOriginalShape() {
+        ctx.lineWidth = 3;
+        if (currentLevelIdx === 0) {
+            // El Maniquí Rígido
+            ctx.fillStyle = "#2d1b08";
+            ctx.strokeStyle = "#ea580c";
+            ctx.beginPath();
+            ctx.rect(boss.x - 20, boss.y - 20, 40, 40);
+            ctx.fill();
+            ctx.stroke();
+        } 
+        else if (currentLevelIdx === 1) {
+            // La Máscara Asimétrica
+            ctx.fillStyle = "#1e1b4b";
+            ctx.strokeStyle = "#d946ef";
+            ctx.beginPath();
+            ctx.ellipse(boss.x, boss.y, 22, 28, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.stroke();
+        } 
+        else if (currentLevelIdx === 2) {
+            // El Titiritero Enredado
+            ctx.fillStyle = "#020617";
+            ctx.strokeStyle = "#3b82f6";
+            ctx.beginPath();
+            ctx.moveTo(boss.x - 24, boss.y - 12);
+            ctx.lineTo(boss.x + 24, boss.y - 12);
+            ctx.lineTo(boss.x, boss.y + 24);
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+        else {
+            // Formas poligonales complejas e inestables
+            ctx.fillStyle = "#0f172a";
+            ctx.strokeStyle = "#a855f7";
+            ctx.beginPath();
+            const sides = 5 + (currentLevelIdx % 3);
+            for (let i = 0; i < sides; i++) {
+                const angle = (i / sides) * Math.PI * 2;
+                const rx = boss.x + Math.cos(angle) * 22;
+                const ry = boss.y + Math.sin(angle) * 22;
+                if (i === 0) ctx.moveTo(rx, ry);
+                else ctx.lineTo(rx, ry);
+            }
+            ctx.closePath();
+            ctx.fill();
+            ctx.stroke();
+        }
+    }
+</script>
+
+<script>
+    function handleBossDefeat() {
+        gameState = "TRIVIA";
+        canvasModeIndicator.innerText = "Modo Libro";
+        canvasModeIndicator.className = "text-emerald-400";
+        
+        gameCombatPhase.classList.add('hidden');
+        gameTriviaPhase.classList.remove('hidden');
+        
+        setupTriviaPhase();
+    }
+
+    function setupTriviaPhase() {
+        const levelData = gameLevels[currentLevelIdx];
+        uiTriviaQuestion.innerText = levelData.trivia.question;
+        
+        uiTriviaFeedback.classList.add('hidden');
+        uiTriviaContinue.classList.add('hidden');
+        
+        drawAnatomySketch(levelData.trivia.drawType);
+
+        uiTriviaOptions.innerHTML = "";
+        levelData.trivia.options.forEach((option, idx) => {
+            const btn = document.createElement('button');
+            btn.className = "w-full text-left p-3 bg-slate-950 hover:bg-slate-800 active:scale-[0.99] transition rounded-xl border border-slate-900 text-xs md:text-sm flex items-center justify-between group";
+            btn.innerHTML = `
+                <span>${option.text}</span>
+                <i class="fa-solid fa-chevron-right text-slate-600 group-hover:text-indigo-400 transition"></i>
+            `;
+            btn.onclick = () => checkTriviaAnswer(option.correct, idx);
+            uiTriviaOptions.appendChild(btn);
+        });
+    }
+</script>
+
+<script>
+    function drawAnatomySketch(type, highlight = false) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        
+        // Cuadrícula azul de diseñador tradicional
+        ctx.fillStyle = '#0a0d18';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        
+        ctx.strokeStyle = 'rgba(99, 102, 241, 0.08)';
+        ctx.lineWidth = 1;
+        for (let i = 0; i < canvas.width; i += 30) {
+            ctx.beginPath(); ctx.moveTo(i, 0); ctx.lineTo(i, canvas.height); ctx.stroke();
+        }
+        for (let j = 0; j < canvas.height; j += 30) {
+            ctx.beginPath(); ctx.moveTo(0, j); ctx.lineTo(canvas.width, j); ctx.stroke();
+        }
+
+        ctx.strokeStyle = highlight ? '#10b981' : '#6366f1'; 
+        ctx.lineWidth = 2.5;
+        ctx.fillStyle = '#6366f1';
+        
+        if (type === 'grid8') {
+            const startY = 30, stepY = 40;
+            ctx.strokeStyle = 'rgba(99, 102, 241, 0.2)';
+            for(let i=0; i<=8; i++) {
+                const y = startY + i * stepY;
+                ctx.beginPath(); ctx.moveTo(80, y); ctx.lineTo(520, y); ctx.stroke();
+                ctx.fillStyle = 'rgba(148, 163, 184, 0.7)';
+                ctx.font = '10px Inter';
+                ctx.fillText(`Unidad Cabeza ${i}`, 90, y + 15);
+            }
+            
+            ctx.strokeStyle = highlight ? '#10b981' : '#6366f1';
+            ctx.lineWidth = 3;
+            // Cabeza
+            ctx.beginPath(); ctx.arc(300, startY + stepY/2, stepY/2 - 4, 0, Math.PI*2); ctx.stroke();
+            // Torso
+            ctx.beginPath(); ctx.moveTo(300, startY + stepY); ctx.lineTo(300, startY + stepY * 4); ctx.stroke();
+            // Hombros
+            ctx.beginPath(); ctx.moveTo(270, startY + stepY * 1.3); ctx.lineTo(330, startY + stepY * 1.3); ctx.stroke();
+            // Caderas
+            ctx.beginPath(); ctx.moveTo(275, startY + stepY * 4); ctx.lineTo(325, startY + stepY * 4); ctx.stroke();
+            // Piernas
+            ctx.beginPath();
+            ctx.moveTo(275, startY + stepY * 4); ctx.lineTo(275, startY + stepY * 8 - 10);
+            ctx.moveTo(325, startY + stepY * 4); ctx.lineTo(325, startY + stepY * 8 - 10);
+            ctx.stroke();
+            
+        } else if (type === 'face') {
+            ctx.beginPath(); ctx.arc(300, 200, 120, 0, Math.PI * 2); ctx.stroke();
+            
+            // Línea de los ojos exacta (50% de la cabeza)
+            ctx.strokeStyle = highlight ? '#10b981' : 'rgba(239, 68, 68, 0.8)';
+            ctx.lineWidth = highlight ? 3.5 : 2;
+            ctx.beginPath(); ctx.moveTo(170, 200); ctx.lineTo(430, 200); ctx.stroke();
+            
+            ctx.fillStyle = highlight ? '#10b981' : '#ef4444';
+            ctx.font = 'bold 11px Inter';
+            ctx.fillText("LÍNEA CENTRAL DE LOS OJOS (50% DE ALTURA)", 180, 185);
+            
+            ctx.strokeStyle = '#6366f1';
+            ctx.lineWidth = 2.5;
+            ctx.beginPath();
+            ctx.arc(245, 200, 14, 0, Math.PI, true); 
+            ctx.arc(355, 200, 14, 0, Math.PI, true); 
+            ctx.stroke();
+            
+        } else if (type === 'arms') {
+            ctx.beginPath();
+            ctx.moveTo(250, 60); ctx.lineTo(350, 60);
+            ctx.lineTo(330, 180); 
+            ctx.lineTo(340, 270); 
+            ctx.lineTo(260, 270); ctx.lineTo(270, 180);
+            ctx.closePath(); ctx.stroke();
+            
+            ctx.strokeStyle = highlight ? '#10b981' : 'rgba(239, 68, 68, 0.8)';
+            ctx.beginPath(); ctx.moveTo(180, 180); ctx.lineTo(420, 180); ctx.stroke();
+            
+            ctx.fillStyle = highlight ? '#10b981' : '#ef4444';
+            ctx.font = 'bold 11px Inter';
+            ctx.fillText("ALINEACIÓN DE CODOS (CINTURA Y OMBLIGO)", 200, 165);
+            
+            ctx.strokeStyle = '#6366f1';
+            ctx.beginPath();
+            ctx.moveTo(250, 60); ctx.lineTo(235, 180); ctx.lineTo(225, 260); 
+            ctx.stroke();
+            ctx.fillStyle = '#10b981';
+            ctx.beginPath(); ctx.arc(235, 180, 7, 0, Math.PI*2); ctx.fill();
+            
+        } else {
+            ctx.strokeStyle = '#6366f1';
+            ctx.font = 'bold 14px Inter';
+            ctx.fillStyle = '#818cf8';
+            ctx.fillText("DIBUJO TÉCNICO Y REFLEXIÓN DE ANATOMÍA", 130, 150);
+            ctx.font = '12px Inter';
+            ctx.fillStyle = '#94a3b8';
+            ctx.fillText("Revisa la pregunta de la derecha y asocia las formas de apoyo.", 110, 180);
+            ctx.strokeRect(100, 100, 400, 200);
+        }
+    }
+</script>
+
+<script>
+    function checkTriviaAnswer(isCorrect, selectedIdx) {
+        const levelData = gameLevels[currentLevelIdx];
+        const buttons = uiTriviaOptions.querySelectorAll('button');
+        buttons.forEach(btn => btn.disabled = true);
+
+        drawAnatomySketch(levelData.trivia.drawType, true);
+
+        if (isCorrect) {
+            // RECUPERA EL 100% de tu salud máxima de inmediato (Rellena toda la vida)
+            playerHp = playerMaxHp;
+            hasNerf = false;
+            playerDamageMultiplier = 1.0;
+            
+            playHealSound();
+            
+            uiTriviaFeedback.className = "p-3 rounded-xl text-xs leading-relaxed border bg-emerald-950/40 border-emerald-500/30 text-emerald-300";
+            uiTriviaFeedbackTitle.innerHTML = `<i class="fa-solid fa-square-check text-emerald-400 mr-1.5"></i> ¡SENSACIONAL! Tu salud se ha rellenado al 100%`;
+            uiTriviaFeedbackText.innerText = levelData.trivia.explanation;
+        } else {
+            // PENALIZACIÓN: Recibe un nerf de daño para la siguiente ronda
+            hasNerf = true;
+            playerDamageMultiplier = 0.6; // Tu daño baja un 40%
+            
+            playNerfSound();
+
+            uiTriviaFeedback.className = "p-3 rounded-xl text-xs leading-relaxed border bg-rose-950/40 border-rose-500/30 text-rose-300";
+            uiTriviaFeedbackTitle.innerHTML = `<i class="fa-solid fa-circle-exclamation text-rose-400 mr-1.5"></i> ERROR: Nerfeo Aplicado (-40% de Daño)`;
+            uiTriviaFeedbackText.innerHTML = `${levelData.trivia.explanation} <br><br><strong>Consecuencia de combate:</strong> Tus ataques harán un 40% menos de daño en el siguiente nivel de combate.`;
+        }
+
+        uiTriviaFeedback.classList.remove('hidden');
+        uiTriviaContinue.classList.remove('hidden');
+        updateHpBars();
+    }
+
+    function advanceLevel() {
+        currentLevelIdx++;
+        if (currentLevelIdx < gameLevels.length) {
+            loadLevel();
+        } else {
+            endGame(true);
+        }
+    }
+
+    function endGame(isVictory) {
+        gameState = "END";
+        gameScreen.classList.add('hidden');
+        endScreen.classList.remove('hidden');
+
+        const uiEndBanner = document.getElementById('ui-end-banner');
+        const uiEndIconContainer = document.getElementById('ui-end-icon-container');
+        const uiEndTitle = document.getElementById('ui-end-title');
+        const uiEndText = document.getElementById('ui-end-text');
+
+        if (isVictory) {
+            uiEndBanner.className = "absolute top-0 left-0 w-full h-1.5 bg-emerald-500";
+            uiEndIconContainer.innerHTML = `<i class="fa-solid fa-trophy text-6xl text-amber-400 drop-shadow-[0_0_15px_rgba(245,158,11,0.4)] animate-bounce"></i>`;
+            uiEndTitle.innerText = "¡Gran Maestro del Dibujo!";
+            uiEndText.innerHTML = "¡Excelente! Has sobrevivido a las ruinas y completado las 5 pruebas de combate de la ciudad esquivando al clon mímico del maniquí con éxito.";
+        } else {
+            uiEndBanner.className = "absolute top-0 left-0 w-full h-1.5 bg-rose-500";
+            uiEndIconContainer.innerHTML = `<i class="fa-solid fa-heart-crack text-6xl text-rose-500 drop-shadow-[0_0_15px_rgba(239,68,68,0.4)]"></i>`;
+            uiEndTitle.innerText = "Boceto Destruido";
+            uiEndText.innerText = "No has soportado el nivel de mimetismo y la ráfaga de ataques del enemigo. ¡Regresa al tablero y reinténtalo!";
+        }
+    }
+
+    function resetGame() {
+        endScreen.classList.add('hidden');
+        menuScreen.classList.remove('hidden');
+    }
+
+    // El Bucle Principal del juego en Canvas
+    function mainLoop() {
+        if (gameState === "COMBAT") {
+            updateBossBehavior();
+            updateGamePhysics();
+            drawCombatScene();
+        }
+        requestAnimationFrame(mainLoop);
+    }
+
+    window.onload = function() {
+        mainLoop();
+    }
+</script>
+
+</body>
+</html>
